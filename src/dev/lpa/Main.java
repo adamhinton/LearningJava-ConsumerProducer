@@ -1,15 +1,41 @@
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+package dev.lpa;
+
+class MessageRepository{
+
+    private String message;
+
+    // Indicates to both threads wheterh they have work to do
+    // When false, prod can pop shared message
+    // when true, consumer can read it
+    private boolean hasMessage = false;
+
+    public synchronized String read(){
+        while (!hasMessage){
+            // empty
+        }
+
+        // False again once message is retrieved
+        hasMessage = false;
+
+        return message;
+    }
+
+
+    public synchronized void write (String message){
+        while (hasMessage){
+            //empty
+            // wait for msg to be read by consumer
+        }
+
+        hasMessage = true;
+        this.message = message;
+    }
+}
+
 public class Main {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
-        }
+
+
     }
 }
