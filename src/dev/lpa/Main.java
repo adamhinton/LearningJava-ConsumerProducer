@@ -19,31 +19,39 @@ class MessageRepository {
     private final Lock lock = new ReentrantLock();
 
     public String read() {
-        while (!hasMessage) {
-            try {
-                // Wait until hasMessage, I think
-                wait();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+
+        // have to lock and unlock this manually, the tradeoff of more utility
+        lock.lock();
+
+        try {
+            while (!hasMessage) {
+                try {
+                    // poll hasMessage every half second
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
+
+            // False again once message is retrieved
+            hasMessage = false;
+
+        } finally {
+            // have to lock and unlock this manually, the tradeoff of more utility
+            lock.unlock();
+            return message;
         }
 
-        // False again once message is retrieved
-        hasMessage = false;
-        // Wake up all threads waiting on this
-        notifyAll();
-        return message;
     }
 
 
     public synchronized void write(String message) {
         while (hasMessage) {
             // wait for msg to be read by consumer
-            try{
+            try {
                 // wait for !hasMessage
                 wait();
-            }
-            catch(InterruptedException e){
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -132,6 +140,22 @@ public class Main {
         Thread reader = new Thread(new MessageReader(messageRepository));
 
         Thread writer = new Thread(new MessageWriter(messageRepository));
+
+        writer.setUncaughtExceptionHandler((thread, exc) -> {
+            System.out.println("Writer has exception: " + exc);
+            if (reader.isAlive()) {
+                System.out.println("Going to interrupt the Reader");
+                reader.interrupt();
+            }
+        });
+
+        reader.setUncaughtExceptionHandler((thread, exc) -> {
+            System.out.println("Reader has exception: " + exc);
+            if (writer.isAlive()) {
+                System.out.println("Going to interrupt the writer");
+                writer.interrupt();
+            }
+        });
 
         reader.start();
         writer.start();
