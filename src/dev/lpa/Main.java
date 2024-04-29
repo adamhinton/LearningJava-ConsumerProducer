@@ -1,3 +1,6 @@
+// never assume a thread is being woken up bc the condxn it's waiting on is changed. It could be woken up for a
+// variety of reasons
+
 package dev.lpa;
 
 import java.util.Random;
