@@ -2,7 +2,7 @@ package dev.lpa;
 
 import java.util.Random;
 
-class MessageRepository{
+class MessageRepository {
 
     private String message;
 
@@ -11,31 +11,45 @@ class MessageRepository{
     // when true, consumer can read it
     private boolean hasMessage = false;
 
-    public synchronized String read(){
-        while (!hasMessage){
-            // empty
+    public synchronized String read() {
+        while (!hasMessage) {
+            try {
+                // Wait until hasMessage, I think
+                wait();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         // False again once message is retrieved
         hasMessage = false;
-
+        // Wake up all threads waiting on this
+        notifyAll();
         return message;
     }
 
 
-    public synchronized void write (String message){
-        while (hasMessage){
-            //empty
+    public synchronized void write(String message) {
+        while (hasMessage) {
             // wait for msg to be read by consumer
+            try{
+                // wait for !hasMessage
+                wait();
+            }
+            catch(InterruptedException e){
+                throw new RuntimeException(e);
+            }
         }
 
         hasMessage = true;
+        // Notify any threads waiting for this
+        notifyAll();
         this.message = message;
     }
 }
 
 // Producer
-class MessageWriter implements Runnable{
+class MessageWriter implements Runnable {
 
     private MessageRepository outgoingMessage;
 
@@ -56,12 +70,11 @@ class MessageWriter implements Runnable{
 
         String[] lines = text.split("\n");
 
-        for (int i=0; i< lines.length; i++){
+        for (int i = 0; i < lines.length; i++) {
             outgoingMessage.write(lines[i]);
-            try{
+            try {
                 Thread.sleep(random.nextInt(500, 2000));
-            }
-            catch (InterruptedException e){
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -72,7 +85,7 @@ class MessageWriter implements Runnable{
 
 
 // Consumer
-class MessageReader implements Runnable{
+class MessageReader implements Runnable {
 
     private MessageRepository incomingMessage;
 
@@ -84,19 +97,18 @@ class MessageReader implements Runnable{
     public void run() {
 
         Random random = new Random();
-        String latestMessage=  "";
+        String latestMessage = "";
 
-        do{
-            try{
+        do {
+            try {
                 Thread.sleep(random.nextInt(500, 2000));
-            }
-            catch (InterruptedException e){
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
             latestMessage = incomingMessage.read();
             System.out.println(latestMessage);
         }
-        while(!latestMessage.equals("Finished"));
+        while (!latestMessage.equals("Finished"));
 
     }
 
