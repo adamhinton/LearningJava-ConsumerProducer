@@ -106,7 +106,16 @@ class MessageReader implements Runnable{
 public class Main {
     public static void main(String[] args) {
 
+        MessageRepository messageRepository = new MessageRepository();
 
+        // two threads - one for message reader and one for message writer
+
+        Thread reader = new Thread(new MessageReader(messageRepository));
+
+        Thread writer = new Thread(new MessageWriter(messageRepository));
+
+        reader.start();
+        writer.start();
 
     }
 }
