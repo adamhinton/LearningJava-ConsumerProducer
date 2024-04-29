@@ -21,45 +21,59 @@ class MessageRepository {
     public String read() {
 
         // have to lock and unlock this manually, the tradeoff of more utility
-        lock.lock();
-
-        try {
-            while (!hasMessage) {
-                try {
-                    // poll hasMessage every half second
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+        if (lock.tryLock()) {
+            try {
+                while (!hasMessage) {
+                    try {
+                        // poll hasMessage every half second
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
+
+                // False again once message is retrieved
+                hasMessage = false;
+
+            } finally {
+                // have to lock and unlock this manually, the tradeoff of more utility
+                lock.unlock();
             }
-
-            // False again once message is retrieved
+        } else {
+            System.out.println("** read blocked");
             hasMessage = false;
-
-        } finally {
-            // have to lock and unlock this manually, the tradeoff of more utility
-            lock.unlock();
-            return message;
         }
 
+        return message;
     }
 
 
-    public synchronized void write(String message) {
-        while (hasMessage) {
-            // wait for msg to be read by consumer
+    public void write(String message) {
+
+        if (lock.tryLock()) {
             try {
-                // wait for !hasMessage
-                wait();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                while (hasMessage) {
+                    // wait for msg to be read by consumer
+                    try {
+                        // wait for !hasMessage
+                        wait();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                hasMessage = true;
+            } finally {
+                lock.unlock();
             }
+        } else {
+            System.out.println("** write blocked");
+            hasMessage= true;
+            this.message = message;
+
         }
 
-        hasMessage = true;
-        // Notify any threads waiting for this
-        notifyAll();
-        this.message = message;
+
     }
 }
 
