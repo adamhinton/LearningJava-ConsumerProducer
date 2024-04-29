@@ -4,6 +4,8 @@
 package dev.lpa;
 
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class MessageRepository {
 
@@ -14,7 +16,9 @@ class MessageRepository {
     // when true, consumer can read it
     private boolean hasMessage = false;
 
-    public synchronized String read() {
+    private final Lock lock = new ReentrantLock();
+
+    public String read() {
         while (!hasMessage) {
             try {
                 // Wait until hasMessage, I think
